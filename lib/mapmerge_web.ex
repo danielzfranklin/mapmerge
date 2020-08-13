@@ -69,6 +69,7 @@ defmodule MapmergeWeb do
       import MapmergeWeb.ErrorHelpers
       import MapmergeWeb.Gettext
       alias MapmergeWeb.Router.Helpers, as: Routes
+      alias MapmergeWeb.Endpoint
     end
   end
 
