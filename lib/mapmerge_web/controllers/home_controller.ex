@@ -1,4 +1,4 @@
-defmodule MapmergeWeb.PageController do
+defmodule MapmergeWeb.HomeController do
   use MapmergeWeb, :controller
 
   def index(conn, _params) do
