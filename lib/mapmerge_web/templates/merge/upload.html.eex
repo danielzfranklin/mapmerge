@@ -1,0 +1,4 @@
+<%= form_for :upload, Routes.merge_path(Endpoint, :handle_upload), [multipart: true], fn f -> %>
+    <%= file_input f, :image, required: true %>
+    <%= submit "Next" %>
+<% end %>

@@ -1,0 +1,270 @@
+<div id="leaflet-embed" style="height: 600px"></div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+crossorigin=""></script>
+
+<style>
+   .scale-icon {
+      background-color: white;
+      /* if size changes update js */
+      width: 15px;
+      height: 15px;
+   }
+</style>
+
+<script>
+    const CORNERS = [
+        {getter: "getNorthWest", oppositeGetter: "getSouthEast", cursor: "nw-resize"},
+        {getter: "getNorthEast", oppositeGetter: "getSouthWest", cursor: "ne-resize"},
+        {getter: "getSouthEast", oppositeGetter: "getNorthWest", cursor: "se-resize"},
+        {getter: "getSouthWest", oppositeGetter: "getNorthEast", cursor: "sw-resize"}
+    ];
+    const SIDES = [
+        {side: "North", cursor: "n-resize", cornerGetters: ["getNorthWest", "getNorthEast"], draggable: "lat", fixed: "lng"},
+        {side: "East", cursor: "e-resize", cornerGetters: ["getNorthEast", "getSouthEast"], draggable: "lng", fixed: "lat"},
+        {side: "South", cursor: "s-resize", cornerGetters: ["getSouthEast", "getSouthWest"], draggable: "lat", fixed: "lng"},
+        {side: "West", cursor: "w-resize", cornerGetters: ["getSouthWest", "getNorthWest"], draggable: "lng", fixed: "lat"}
+    ];
+
+    const SCALE_ICON_SIZE = 15; // set in css
+    const SCALE_ICON = L.icon({
+        iconUrl: `data:image/svg,<svg></svg>`,
+        className: "scale-icon",
+        iconSize: [SCALE_ICON_SIZE, SCALE_ICON_SIZE]
+    });
+
+    const map = createMap();
+    const overlay = createOverlay(map);
+
+    function createMap() {
+        const INITIAL_ZOOM = 13;
+        const map = L.map('leaflet-embed').setView([<%= elem(@map_center, 0) %>, <%= elem(@map_center, 1) %>], INITIAL_ZOOM);
+        addMapLayers(map);
+        return map;
+    }
+
+    function createOverlay(map) {
+        const imageUrl = "<%= @image_url %>";
+        const initialOverlayBounds = L.latLngBounds(L.latLng(40.712216, -74.22655), L.latLng(40.773941, -74.12544));
+        const overlay = L.imageOverlay(imageUrl, initialOverlayBounds, {
+            interactive: true,
+            opacity: 0.5
+        });
+
+        overlay.addTo(map);
+        makeOverlayDraggable(map, overlay);
+        makeOverlayScalable(map, overlay);
+
+        return overlay;
+    }
+
+    function addMapLayers(map) {
+        const baseLayers = {
+            "Outdoors": makeMapboxTileLayer("mapbox/outdoors-v11"),
+            "Satellight": makeMapboxTileLayer("mapbox/satellite-v9"),
+            "Satellight with Streets": makeMapboxTileLayer("mapbox/satellite-streets-v11"),
+            "Streets": makeMapboxTileLayer("mapbox/streets-v11")
+        }
+
+        const overlays = {}
+
+        baseLayers.Outdoors.addTo(map); // set to the default
+        L.control.layers(baseLayers, overlays).addTo(map);
+    }
+
+    function makeMapboxTileLayer(styleId) {
+        const MAPBOX_TILE_ENDPOINT = "https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}";
+        const MAPBOX_ATTRIBUTION = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>';
+
+        return L.tileLayer(MAPBOX_TILE_ENDPOINT, {
+            id: styleId,
+            attribution: MAPBOX_ATTRIBUTION,
+            maxZoom: 18,
+            tileSize: 512,
+            zoomOffset: -1,
+            accessToken: "<%= @mapbox_token %>"
+        })
+    }
+
+    function makeOverlayScalable(map, overlay, sides) {
+        let bounds = overlay.getBounds();
+        const markers = [];
+
+        for (const desc of SIDES) {
+            const marker = createScalerMarker(map, desc.cursor, bounds,
+                bounds => computeSideCenter(desc, bounds),
+                ({oldLatLng, latLng}) => computeScaledBoundsSide(overlay.getBounds(), desc, latLng));
+            markers.push(marker);
+        }
+
+        for (const corner of CORNERS) {
+            const marker = createScalerMarker(map, corner.cursor, bounds,
+                bounds => bounds[corner.getter](),
+                latLngs => computeScaledBoundsCorner(overlay.getBounds(), corner, latLngs));
+            markers.push(marker);
+        }
+
+        overlay.on("setbounds", ({newBounds}) => {
+            // fires when we scale the overlay or when the overlay moves
+            for (const marker of markers) {
+                marker.updatePositionFromBounds(newBounds)
+            }
+        });
+    }
+
+    function createScalerMarker(map, cursor, currentBounds, computePosition, computeNewBounds) {
+        const marker = L.marker(computePosition(currentBounds), {
+            keyboard: false,
+            title: "Drag to scale",
+            opacity: 0.7,
+            draggable: true,
+            icon: SCALE_ICON
+        });
+        marker.addTo(map);
+        marker._icon.style.cursor = cursor;
+
+        marker.updatePositionFromBounds =
+            bounds => marker.setLatLng(computePosition(bounds));
+
+        marker.on("drag", ({oldLatLng, latlng: latLng}) => {
+            const newBounds = computeNewBounds({oldLatLng, latLng});
+            // this triggers the setbounds handler below which moves the marker
+            setOverlayBounds(overlay, newBounds);
+        });
+
+        return marker;
+    }
+
+    function computeScaledBoundsSide(bounds, side, newCenter) {
+        const corners = getBoundsCorners(bounds);
+
+        for (let getter of side.cornerGetters) {
+            corners[getter][side.draggable] = newCenter[side.draggable];
+        }
+
+        return L.latLngBounds(corners["getNorthWest"], corners["getSouthEast"]);
+    }
+
+    function computeScaledBoundsCorner(bounds, corner, {oldLatLng, latLng}) {
+        const cornerPoint = bounds[corner.getter]();
+        const oppositePoint = bounds[corner.oppositeGetter]();
+        const lineA = lineFromPoints(cornerPoint, oppositePoint); // line new corner lies on
+        const lineB = lineFromPointSlope(latLng, -1 / lineA.slope); // line to lineA
+        const snappedPoint = lineIntersection(lineA, lineB);
+        return L.latLngBounds(snappedPoint, oppositePoint);
+    }
+
+    function lineFromPoints(pointA, pointB) {
+        const slope = (pointA.lat - pointB.lat) / (pointA.lng - pointB.lng);
+        return {point: pointA, slope};
+    }
+
+    function lineFromPointSlope(point, slope) {
+        return {point, slope};
+    }
+
+    function lineIntersection(lineA, lineB) {
+        /*
+        y = lineA.slope * (x - hA) + kA
+          = x * lineA.slope - hA * lineA.slope + kA
+
+        y = lineB.slope * (x - hB) + kB
+          = x * lineB.slope - hB * lineB.slope + kB
+
+        x * lineA.slope - hA * lineA.slope + kA = x * lineB.slope - hB * lineB.slope + kB
+        x * lineA.slope - x * lineB.slope = hA * lineA.slope - kA - hB * lineB.slope + kB
+        x * (lineA.slope - lineB.slope) = hA * lineA.slope - kA - hB * lineB.slope + kB
+
+        x = (hA * lineA.slope - kA - hB * lineB.slope + kB) / (lineA.slope - lineB.slope)
+        y = lineA.slope * (x - hA) + kA
+        */
+
+        if (lineA.slope === lineB.slope) {
+            throw new Error("Does not handle case when lines have the same slope");
+        }
+
+        const hA = lineA.point.lng;
+        const kA = lineA.point.lat;
+
+        const hB = lineB.point.lng;
+        const kB = lineB.point.lat;
+        const x = (hA * lineA.slope - kA - hB * lineB.slope + kB) / (lineA.slope - lineB.slope);
+        const y = lineA.slope * (x - hA) + kA;
+
+        return L.latLng(y, x);
+    }
+
+    function getBoundsCorners(bounds) {
+        const corners = {};
+        for (let {getter} of CORNERS) {
+            corners[getter] = bounds[getter]()
+        }
+        return corners;
+    }
+
+    function computeSideCenter({cornerGetters, fixed, draggable}, bounds) {
+        let [a, b] = cornerGetters.map(getter => bounds[getter]());
+        return L.latLng({
+            [draggable]: a[draggable],
+            [fixed]: (a[fixed] + b[fixed]) / 2,
+        });
+    }
+
+    function makeOverlayDraggable(map, overlay) {
+        overlay._image.draggable = false; // disable native drag to copy
+        overlay._image.style.cursor = "move";
+
+        let dragState = {currentlyDragging: false};
+        overlay.on("mousedown", evt => {
+            console.log("Starting drag from event", evt);
+            // disrupt the default so that the map doesn't pan
+            map.dragging.disable();
+            map.dragging.enable();
+
+            dragState = {currentlyDragging: true};
+        });
+        map.on("mousemove", event => {
+            if (!dragState.currentlyDragging) {
+                return;
+            }
+
+            const last = dragState.lastMouseCoordinates;
+            const latLng = event.latlng;
+
+            if (last) {
+                const deltaLat = latLng.lat - last.lat;
+                const deltaLng = latLng.lng - last.lng;
+                const newBounds = computeShiftedBounds(overlay.getBounds(), deltaLat, deltaLng);
+                setOverlayBounds(overlay, newBounds);
+            }
+
+            dragState.lastMouseCoordinates = latLng;
+        });
+        overlay.on("mouseup", () => {
+            if (!dragState.currentlyDragging) {
+                return;
+            }
+
+            dragState = {currentlyDragging: false};
+        });
+    }
+
+    function setOverlayBounds(overlay, newBounds) {
+        overlay.setBounds(newBounds);
+        overlay.fire("setbounds", {newBounds});
+    }
+
+    function computeShiftedBounds(bounds, deltaLat, deltaLng) {
+        return L.latLngBounds(
+            computeShiftedCoordinate(bounds.getNorthWest(), deltaLat, deltaLng),
+            computeShiftedCoordinate(bounds.getSouthEast(), deltaLat, deltaLng)
+        );
+    }
+    function computeShiftedCoordinate(latLng, deltaLat, deltaLng) {
+        return L.latLng(latLng.lat + deltaLat, latLng.lng + deltaLng);
+    }
+</script>

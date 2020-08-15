@@ -17,6 +17,10 @@ defmodule MapmergeWeb.Router do
     pipe_through :browser
 
     get "/", HomeController, :index
+
+    get "/merge/upload", MergeController, :upload
+    post "/merge/upload", MergeController, :handle_upload
+    get "/merge/position/:id", MergeController, :position
   end
 
   # Other scopes may use custom stacks.

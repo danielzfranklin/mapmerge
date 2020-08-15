@@ -18,6 +18,10 @@ config :mapmerge, MapmergeWeb.Endpoint,
   pubsub_server: Mapmerge.PubSub,
   live_view: [signing_salt: "Mxv2F1qG"]
 
+config :mapmerge, :mapbox,
+  token:
+    "sk.eyJ1IjoiZHpmcmFua2xpbiIsImEiOiJja2R0aHdidHExY3RmMnFtc3F0b2g2amU0In0.AS1a5ewomszcX6Q2JqUrnw"
+
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
