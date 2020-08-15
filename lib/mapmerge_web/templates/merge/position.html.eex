@@ -40,6 +40,9 @@ crossorigin=""></script>
     const map = createMap();
     const overlay = createOverlay(map);
 
+    initializeUndo(overlay);
+    // TODO: connect to keyboard
+
     function createMap() {
         const INITIAL_ZOOM = 13;
         const map = L.map('leaflet-embed').setView([<%= elem(@map_center, 0) %>, <%= elem(@map_center, 1) %>], INITIAL_ZOOM);
@@ -135,6 +138,7 @@ crossorigin=""></script>
             // this triggers the setbounds handler below which moves the marker
             setOverlayBounds(overlay, newBounds);
         });
+        marker.on("dragend", () => registerUndoPoint(overlay));
 
         return marker;
     }
@@ -249,6 +253,7 @@ crossorigin=""></script>
                 return;
             }
 
+            registerUndoPoint(overlay);
             dragState = {currentlyDragging: false};
         });
     }
@@ -266,5 +271,41 @@ crossorigin=""></script>
     }
     function computeShiftedCoordinate(latLng, deltaLat, deltaLng) {
         return L.latLng(latLng.lat + deltaLat, latLng.lng + deltaLng);
+    }
+
+    function initializeUndo(overlay) {
+        const UNDO_BUFFER_SIZE = Math.pow(10, 6);
+        const registry = setUndoRegistry(overlay, createRing(UNDO_BUFFER_SIZE));
+        ringInsert(registry, 0, overlay.getBounds());
+    }
+
+    function registerUndoPoint(overlay) {
+       const registry = getUndoRegistry(overlay);
+       ringInsert(registry, registry.presentH, overlay.getBounds());
+    }
+
+    function undo(overlay) {
+        changePresent(overlay, -1);
+    }
+
+    function redo(overlay) {
+        changePresent(overlay, 1);
+    }
+
+    function changePresent(overlay, delta) {
+        const registry = getUndoRegistry(overlay);
+        const newPresent = ringMovePresent(registry, delta);
+        if (newPresent !== null) {
+            setOverlayBounds(overlay, newPresent);
+        }
+    }
+
+    function getUndoRegistry(overlay) {
+        return overlay._undoRegistry;
+    }
+
+    function setUndoRegistry(overlay, registry) {
+        overlay._undoRegistry = registry;
+        return registry;
     }
 </script>
