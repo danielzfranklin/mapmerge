@@ -39,9 +39,7 @@ crossorigin=""></script>
 
     const map = createMap();
     const overlay = createOverlay(map);
-
     initializeUndo(overlay);
-    // TODO: connect to keyboard
 
     function createMap() {
         const INITIAL_ZOOM = 13;
@@ -274,30 +272,61 @@ crossorigin=""></script>
     }
 
     function initializeUndo(overlay) {
-        const UNDO_BUFFER_SIZE = Math.pow(10, 6);
-        const registry = setUndoRegistry(overlay, createRing(UNDO_BUFFER_SIZE));
-        ringInsert(registry, 0, overlay.getBounds());
+        const registry = {
+            buf: [overlay.getBounds()],
+            pointer: 0
+        };
+        setUndoRegistry(overlay, registry);
+
+        window.addEventListener("keydown", event => {
+            const {key, ctrlKey, metaKey} = event;
+            // on mac laptops meta is command, the modifier they would use for Command + Z to undo
+            // for example. We support control or meta on all devices instead of trying to detect
+            // macs.
+            if (ctrlKey || metaKey) {
+                if (key === "z") {
+                    undo(overlay);
+                } else if (key === "y") {
+                    redo(overlay);
+                }
+            }
+        });
     }
 
     function registerUndoPoint(overlay) {
-       const registry = getUndoRegistry(overlay);
-       ringInsert(registry, registry.presentH, overlay.getBounds());
+        const registry = getUndoRegistry(overlay);
+
+        // if we are currently partway back into undoing
+        if (registry.pointer !== registry.buf.length - 1) {
+            // delete the history to make space
+            registry.buf = [getPresent(registry)];
+        }
+
+        registry.buf.push(overlay.getBounds());
+        registry.pointer = registry.buf.length - 1;
     }
 
     function undo(overlay) {
-        changePresent(overlay, -1);
+        const registry = getUndoRegistry(overlay);
+        changePresent(registry, -1);
     }
 
     function redo(overlay) {
-        changePresent(overlay, 1);
+        const registry = getUndoRegistry(overlay);
+        changePresent(registry, 1);
     }
 
-    function changePresent(overlay, delta) {
-        const registry = getUndoRegistry(overlay);
-        const newPresent = ringMovePresent(registry, delta);
-        if (newPresent !== null) {
-            setOverlayBounds(overlay, newPresent);
+    function changePresent(registry, delta) {
+        const newPointer = registry.pointer + delta;
+        const bounds = registry.buf[newPointer];
+        if (bounds !== undefined) {
+            registry.pointer = newPointer;
+            setOverlayBounds(overlay, bounds);
         }
+    }
+
+    function getPresent(registry) {
+        return registry.buf[registry.pointer];
     }
 
     function getUndoRegistry(overlay) {
