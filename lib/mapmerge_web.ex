@@ -24,6 +24,7 @@ defmodule MapmergeWeb do
       import Plug.Conn
       import MapmergeWeb.Gettext
       alias MapmergeWeb.Router.Helpers, as: Routes
+      alias MapmergeWeb.Endpoint
     end
   end
 
