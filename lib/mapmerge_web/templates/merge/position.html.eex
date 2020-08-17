@@ -42,15 +42,17 @@ crossorigin=""></script>
     initializeUndo(overlay);
 
     function createMap() {
-        const INITIAL_ZOOM = 13;
-        const map = L.map('leaflet-embed').setView([<%= elem(@map_center, 0) %>, <%= elem(@map_center, 1) %>], INITIAL_ZOOM);
+        const map = L.map('leaflet-embed').setView(<%= serialize_position_to_mapbox_object(@map_center) %>, <%= @map_zoom %>);
         addMapLayers(map);
         return map;
     }
 
     function createOverlay(map) {
         const imageUrl = "<%= @image_url %>";
-        const initialOverlayBounds = L.latLngBounds(L.latLng(40.712216, -74.22655), L.latLng(40.773941, -74.12544));
+        const initialOverlayBounds = L.latLngBounds(
+            <%= serialize_position_to_mapbox_object(@overlay_north_west) %>,
+            <%= serialize_position_to_mapbox_object(@overlay_south_east) %>
+        );
         const overlay = L.imageOverlay(imageUrl, initialOverlayBounds, {
             interactive: true,
             opacity: 0.5

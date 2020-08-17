@@ -17,7 +17,10 @@ defmodule MapmergeWeb.MergeController do
     render(conn, "position.html",
       id: id,
       image_url: image_url_for(merge.id),
-      map_center: merge.suggested_position,
+      map_center: merge.map_center,
+      map_zoom: merge.map_zoom,
+      overlay_north_west: merge.overlay_north_west,
+      overlay_south_east: merge.overlay_south_east,
       mapbox_token: Application.get_env(:mapmerge, :mapbox)[:token]
     )
   end
