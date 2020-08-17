@@ -26,7 +26,7 @@ defmodule MapmergeWeb.MergeController do
   end
 
   def image_url_for(id) do
-    "http://www.lib.utexas.edu/maps/historical/newark_nj_1922.jpg"
+    "/images/example_image.jpg"
   end
 
   def handle_position(conn, %{
