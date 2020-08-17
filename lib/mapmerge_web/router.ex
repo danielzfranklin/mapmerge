@@ -21,6 +21,7 @@ defmodule MapmergeWeb.Router do
     get "/merge/upload", MergeController, :upload
     post "/merge/upload", MergeController, :handle_upload
     get "/merge/position/:id", MergeController, :position
+    post "/merge/position/:id", MergeController, :handle_position
   end
 
   # Other scopes may use custom stacks.

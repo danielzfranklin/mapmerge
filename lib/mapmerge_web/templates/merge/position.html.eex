@@ -1,3 +1,11 @@
+<%= form_for :position, Routes.merge_path(Endpoint, :handle_position, @id), fn f -> %>
+    <%= hidden_input f, :map_center, value: serialize_position(@map_center) %>
+    <%= hidden_input f, :map_zoom, value: @map_zoom %>
+    <%= hidden_input f, :overlay_north_west, value: serialize_position(@overlay_north_west) %>
+    <%= hidden_input f, :overlay_south_east, value: serialize_position(@overlay_south_east) %>
+    <%= submit "Next" %>
+<% end %>
+
 <div id="leaflet-embed" style="height: 600px"></div>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
@@ -39,7 +47,27 @@ crossorigin=""></script>
 
     const map = createMap();
     const overlay = createOverlay(map);
+    persistChanges(map, overlay);
     initializeUndo(overlay);
+
+    function persistChanges(map, overlay) {
+        map.on("zoomend", () => updateChangeToBePersisted("map_zoom", map.getZoom()));
+        map.on("moveend", () => updateChangeToBePersisted("map_center", serializeLatLng(map.getCenter())));
+        overlay.on("setboundsend", ({newBounds}) => {
+            const northWest = serializeLatLng(newBounds.getNorthWest());
+            const southEast = serializeLatLng(newBounds.getSouthEast());
+            updateChangeToBePersisted("overlay_north_west", northWest);
+            updateChangeToBePersisted("overlay_south_east", southEast);
+        });
+    }
+
+    function serializeLatLng(latLng) {
+        return `[${latLng.lat}, ${latLng.lng}]`;
+    }
+
+    function updateChangeToBePersisted(name, value) {
+        document.getElementById("position_" + name).value = value;
+    }
 
     function createMap() {
         const map = L.map('leaflet-embed').setView(<%= serialize_position_to_mapbox_object(@map_center) %>, <%= @map_zoom %>);
@@ -138,7 +166,10 @@ crossorigin=""></script>
             // this triggers the setbounds handler below which moves the marker
             setOverlayBounds(overlay, newBounds);
         });
-        marker.on("dragend", () => registerUndoPoint(overlay));
+        marker.on("dragend", () => {
+            registerUndoPoint(overlay);
+            overlay.fire("setboundsend", {newBounds: overlay.getBounds()});
+        });
 
         return marker;
     }
@@ -254,6 +285,7 @@ crossorigin=""></script>
             }
 
             registerUndoPoint(overlay);
+            overlay.fire("setboundsend", {newBounds: overlay.getBounds()});
             dragState = {currentlyDragging: false};
         });
     }

@@ -28,4 +28,31 @@ defmodule MapmergeWeb.MergeController do
   def image_url_for(id) do
     "http://www.lib.utexas.edu/maps/historical/newark_nj_1922.jpg"
   end
+
+  def handle_position(conn, %{
+        "id" => id,
+        "position" => %{
+          "map_center" => map_center,
+          "map_zoom" => map_zoom,
+          "overlay_north_west" => overlay_north_west,
+          "overlay_south_east" => overlay_south_east
+        }
+      }) do
+    :ok =
+      Merge.set_position(id, %{
+        map_center: deserialize_position(map_center),
+        map_zoom: deserialize_map_zoom(map_zoom),
+        overlay_north_west: deserialize_position(overlay_north_west),
+        overlay_south_east: deserialize_position(overlay_south_east)
+      })
+
+    redirect(conn, to: Routes.merge_path(Endpoint, :trace, id))
+  end
+
+  defp deserialize_map_zoom(string), do: String.to_integer(string)
+
+  defp deserialize_position(string) do
+    {:ok, [lat, lng]} = Jason.decode(string)
+    {lat, lng}
+  end
 end

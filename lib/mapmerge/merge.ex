@@ -22,4 +22,8 @@ defmodule Mapmerge.Merge do
        overlay_south_east: {40.773941, -74.12544}
      }}
   end
+
+  def set_position(id, data) do
+    :ok
+  end
 end
