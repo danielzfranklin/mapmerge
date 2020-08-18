@@ -1,7 +1,7 @@
 // We need to import the CSS so that webpack will load it.
 // The MiniCssExtractPlugin is used to separate it out into
 // its own CSS file.
-import "../css/app.scss"
+import "../css/app.scss";
 
 // webpack automatically bundles all modules in your
 // entry points. Those entry points can be configured
@@ -12,7 +12,8 @@ import "../css/app.scss"
 //     import {Socket} from "phoenix"
 //     import socket from "./socket"
 //
-import "phoenix_html"
+import "phoenix_html";
+
 import LiveSocket from "phoenix_live_view";
 import NProgress from "nprogress";
 
@@ -20,11 +21,11 @@ import NProgress from "nprogress";
 window.addEventListener("phx:page-loading-start", _info => NProgress.start());
 window.addEventListener("phx:page-loading-stop", _info => NProgress.done());
 
-let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } })
+let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
+let liveSocket = new LiveSocket("/live", Socket, { params: { _csrf_token: csrfToken } });
 
 // Connect if there are any LiveViews on the page
-liveSocket.connect()
+liveSocket.connect();
 
 // Expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
@@ -32,4 +33,4 @@ liveSocket.connect()
 // The latency simulator is enabled for the duration of the browser session.
 // Call disableLatencySim() to disable:
 // >> liveSocket.disableLatencySim()
-window.liveSocket = liveSocket
+window.liveSocket = liveSocket;
