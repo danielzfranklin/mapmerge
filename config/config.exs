@@ -16,7 +16,7 @@ config :mapmerge, MapmergeWeb.Endpoint,
   secret_key_base: "qS/ty49sUo6ToIIFtdLclSj5ezFQG8KKPqhHHh1GFvZ+kM5o/d5ZfiiZa8752gGU",
   render_errors: [view: MapmergeWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Mapmerge.PubSub,
-  live_view: [signing_salt: "Mxv2F1qG"]
+  live_view: [signing_salt: "weGovo3ReIEDbWZneziFf2N4RXu1fUUi"]
 
 config :mapmerge, :mapbox,
   token:
