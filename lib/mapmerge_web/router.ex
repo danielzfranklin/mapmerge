@@ -4,7 +4,8 @@ defmodule MapmergeWeb.Router do
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
-    plug :fetch_flash
+    plug :fetch_live_flash
+    plug :put_root_layout, {MapmergeWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
@@ -22,6 +23,9 @@ defmodule MapmergeWeb.Router do
     post "/merge/upload", MergeController, :handle_upload
     get "/merge/position/:id", MergeController, :position
     post "/merge/position/:id", MergeController, :handle_position
+    get "/merge/trace/:id", MergeController, :trace
+
+    live "/image_parser_vis", ImageParserVisLive
   end
 
   # Other scopes may use custom stacks.

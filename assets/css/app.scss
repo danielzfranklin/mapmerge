@@ -1,6 +1,9 @@
 /* This file is for your main application css. */
 @import "./phoenix.css";
 
+@import "../../deps/phoenix_live_view/assets/css/live_view.css";
+@import "../node_modules/nprogress/nprogress.css";
+
 /* Alerts and form errors */
 .alert {
   padding: 15px;
